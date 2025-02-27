@@ -6,7 +6,12 @@ import cv2
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import tempfile
+
+# Set matplotlib backend to non-interactive 'Agg' before importing pyplot
+import matplotlib
+matplotlib.use('Agg')  # This must be before any other matplotlib imports
 import matplotlib.pyplot as plt
+
 from scipy.signal import butter, filtfilt
 
 app = Flask(__name__)

@@ -9,6 +9,7 @@ const BPPredictionApp = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -27,6 +28,7 @@ const BPPredictionApp = () => {
       setError(null);
       setPrediction(null);
       setVideoBlob(null);
+      setShowResults(false);
       
       // Check if video element is available
       if (!videoRef.current) {
@@ -127,12 +129,19 @@ const BPPredictionApp = () => {
       
       const result = await response.json();
       setPrediction(result);
+      setShowResults(true);
     } catch (err) {
       setError("Error getting prediction: " + err.message);
       console.error("Prediction error:", err);
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handleRetake = () => {
+    setShowResults(false);
+    setPrediction(null);
+    setVideoBlob(null);
   };
   
   const getBPCategory = (systolic, diastolic) => {
@@ -148,64 +157,62 @@ const BPPredictionApp = () => {
         <Heart className="mr-2 text-red-500" /> Blood Pressure Estimation
       </h1>
       
-      <div className="w-full bg-gray-100 rounded-lg overflow-hidden mb-6 aspect-video relative">
-        {recording ? (
-          <>
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-black bg-opacity-50 text-white text-4xl font-bold rounded-full w-16 h-16 flex items-center justify-center">
-                {countdown}
-              </div>
-            </div>
-          </>
-        ) : videoBlob ? (
-          <video
-            src={URL.createObjectURL(videoBlob)}
-            className="w-full h-full object-cover"
-            controls
-          />
-        ) : (
-          <>
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover hidden"
-            />
-            <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
-              <CircleOff size={48} className="mb-2" />
-              <p>Camera feed will appear here</p>
-            </div>
-          </>
-        )}
-      </div>
-      
-      <div className="w-full mb-6">
-        <button
-          onClick={startRecording}
-          disabled={recording || loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+      {!showResults && (
+        <div className="w-full bg-gray-100 rounded-lg overflow-hidden mb-6 aspect-video relative">
           {recording ? (
-            <span className="flex items-center">
-              <Loader className="animate-spin mr-2" size={20} />
-              Recording...
-            </span>
+            <>
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="bg-black bg-opacity-50 text-white text-4xl font-bold rounded-full w-16 h-16 flex items-center justify-center">
+                  {countdown}
+                </div>
+              </div>
+            </>
           ) : (
-            <span className="flex items-center">
-              <Camera className="mr-2" size={20} />
-              Start Recording (7 seconds)
-            </span>
+            <>
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover hidden"
+              />
+              <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                <CircleOff size={48} className="mb-2" />
+                <p>Camera feed will appear here</p>
+              </div>
+            </>
           )}
-        </button>
-      </div>
+        </div>
+      )}
+      
+      {!showResults && !loading && (
+        <div className="w-full mb-6">
+          <button
+            onClick={startRecording}
+            disabled={recording}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {recording ? (
+              <span className="flex items-center">
+                <Loader className="animate-spin mr-2" size={20} />
+                Recording...
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <Camera className="mr-2" size={20} />
+                Start Recording (7 seconds)
+              </span>
+            )}
+          </button>
+        </div>
+      )}
       
       {loading && (
         <div className="w-full p-4 bg-gray-100 rounded-lg mb-6 flex flex-col items-center">
@@ -221,55 +228,67 @@ const BPPredictionApp = () => {
         </div>
       )}
       
-      {prediction && (
-        <div className="w-full p-6 bg-white border border-gray-200 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <Activity className="mr-2" /> Blood Pressure Results
-          </h2>
-          
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="bg-blue-50 p-4 rounded-lg text-center">
-              <p className="text-sm text-gray-500 mb-1">Systolic</p>
-              <p className="text-3xl font-bold text-blue-600">{Math.round(prediction.systolic)}</p>
-              <p className="text-xs text-gray-500">mmHg</p>
+      {showResults && prediction && (
+        <>
+          <div className="w-full p-6 bg-white border border-gray-200 rounded-lg shadow-md mb-4">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Activity className="mr-2" /> Blood Pressure Results
+            </h2>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-blue-50 p-4 rounded-lg text-center">
+                <p className="text-sm text-gray-500 mb-1">Systolic</p>
+                <p className="text-3xl font-bold text-blue-600">{Math.round(prediction.systolic)}</p>
+                <p className="text-xs text-gray-500">mmHg</p>
+              </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg text-center">
+                <p className="text-sm text-gray-500 mb-1">Diastolic</p>
+                <p className="text-3xl font-bold text-blue-600">{Math.round(prediction.diastolic)}</p>
+                <p className="text-xs text-gray-500">mmHg</p>
+              </div>
             </div>
             
-            <div className="bg-blue-50 p-4 rounded-lg text-center">
-              <p className="text-sm text-gray-500 mb-1">Diastolic</p>
-              <p className="text-3xl font-bold text-blue-600">{Math.round(prediction.diastolic)}</p>
-              <p className="text-xs text-gray-500">mmHg</p>
-            </div>
-          </div>
-          
-          {prediction.systolic && prediction.diastolic && (
-            <div className="text-center mt-2">
-              <p className="text-lg font-medium">
-                Category: <span className={getBPCategory(prediction.systolic, prediction.diastolic).color}>
-                  {getBPCategory(prediction.systolic, prediction.diastolic).label}
-                </span>
+            {prediction.systolic && prediction.diastolic && (
+              <div className="text-center mt-2">
+                <p className="text-lg font-medium">
+                  Category: <span className={getBPCategory(prediction.systolic, prediction.diastolic).color}>
+                    {getBPCategory(prediction.systolic, prediction.diastolic).label}
+                  </span>
+                </p>
+              </div>
+            )}
+            
+            <div className="mt-4 text-sm text-gray-500">
+              <p className="text-center italic">
+                This is an estimation based on PPG analysis. For accurate medical readings, 
+                please consult a healthcare professional.
               </p>
             </div>
-          )}
-          
-          <div className="mt-4 text-sm text-gray-500">
-            <p className="text-center italic">
-              This is an estimation based on PPG analysis. For accurate medical readings, 
-              please consult a healthcare professional.
-            </p>
           </div>
-        </div>
+          
+          <button
+            onClick={handleRetake}
+            className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg flex items-center justify-center"
+          >
+            <Camera className="mr-2" size={20} />
+            Retake Test
+          </button>
+        </>
       )}
       
-      <div className="mt-8 w-full">
-        <h3 className="font-medium mb-2">Instructions:</h3>
-        <ol className="list-decimal pl-5 space-y-1 text-sm text-gray-700">
-          <li>Position your face clearly in the camera view</li>
-          <li>Ensure good lighting on your face</li>
-          <li>Stay still during the 7-second recording</li>
-          <li>The app will extract PPG signals from your facial skin</li>
-          <li>AI model will estimate your blood pressure</li>
-        </ol>
-      </div>
+      {!showResults && (
+        <div className="mt-8 w-full">
+          <h3 className="font-medium mb-2">Instructions:</h3>
+          <ol className="list-decimal pl-5 space-y-1 text-sm text-gray-700">
+            <li>Position your face clearly in the camera view</li>
+            <li>Ensure good lighting on your face</li>
+            <li>Stay still during the 7-second recording</li>
+            <li>The app will extract PPG signals from your facial skin</li>
+            <li>AI model will estimate your blood pressure</li>
+          </ol>
+        </div>
+      )}
     </div>
   );
 };
