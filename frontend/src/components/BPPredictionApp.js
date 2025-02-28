@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, CircleOff, Activity, Loader, Heart } from 'lucide-react';
+import { Camera, CircleOff, Activity, Loader, Heart, ArrowLeft } from 'lucide-react';
 
-const BPPredictionApp = () => {
+const BPPredictionApp = ({ onBack }) => {
   const [recording, setRecording] = useState(false);
   const [countdown, setCountdown] = useState(7);
   const [videoBlob, setVideoBlob] = useState(null);
@@ -152,10 +152,19 @@ const BPPredictionApp = () => {
   };
   
   return (
-    <div className="flex flex-col items-center max-w-lg mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6 flex items-center">
-        <Heart className="mr-2 text-red-500" /> Blood Pressure Estimation
-      </h1>
+    <div className="flex flex-col items-center max-w-lg mx-auto">
+      <div className="w-full mb-6 flex justify-between items-center">
+        <button 
+          onClick={onBack}
+          className="flex items-center text-blue-600 hover:text-blue-700"
+        >
+          <ArrowLeft size={18} className="mr-1" /> Back
+        </button>
+        <h1 className="text-2xl font-bold flex items-center">
+          <Heart className="mr-2 text-red-500" /> Blood Pressure Estimation
+        </h1>
+        <div className="w-6"></div> {/* Empty div for spacing */}
+      </div>
       
       {!showResults && (
         <div className="w-full bg-gray-100 rounded-lg overflow-hidden mb-6 aspect-video relative">
@@ -267,13 +276,23 @@ const BPPredictionApp = () => {
             </div>
           </div>
           
-          <button
-            onClick={handleRetake}
-            className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg flex items-center justify-center"
-          >
-            <Camera className="mr-2" size={20} />
-            Retake Test
-          </button>
+          <div className="w-full flex space-x-4">
+            <button
+              onClick={handleRetake}
+              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-lg flex items-center justify-center"
+            >
+              <Camera className="mr-2" size={20} />
+              Retake Test
+            </button>
+            
+            <button
+              onClick={onBack}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg flex items-center justify-center"
+            >
+              <ArrowLeft className="mr-2" size={20} />
+              Return Home
+            </button>
+          </div>
         </>
       )}
       
