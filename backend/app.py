@@ -1,15 +1,14 @@
-# app.py - Flask Backend
 import os
 import numpy as np
 import tensorflow as tf
 import cv2
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import tempfile
 
-# Set matplotlib backend to non-interactive 'Agg' before importing pyplot
+
 import matplotlib
-matplotlib.use('Agg')  # This must be before any other matplotlib imports
+matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
 
 from scipy.signal import butter, filtfilt
@@ -24,6 +23,7 @@ os.makedirs(DEBUG_DIR, exist_ok=True)
 # Load the trained ResNet model
 MODEL_PATH = './bp_resnet_model'
 model = tf.keras.models.load_model(MODEL_PATH)
+
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
     """Create a butterworth bandpass filter"""
@@ -391,4 +391,4 @@ def get_debug_info(session_id):
     })
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run()
