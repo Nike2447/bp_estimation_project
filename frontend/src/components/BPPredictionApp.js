@@ -117,7 +117,7 @@ const BPPredictionApp = ({ onBack }) => {
       const formData = new FormData();
       formData.append('video', blob, 'recording.webm');
       
-      const response = await fetch('/predict', {
+      const response = await fetch('https://bp-estimation-project.onrender.com/predict', {
         method: 'POST',
         body: formData,
       });
