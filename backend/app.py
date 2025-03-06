@@ -5,6 +5,7 @@ import cv2
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import tempfile
+import random
 
 
 import matplotlib
@@ -13,14 +14,16 @@ import matplotlib.pyplot as plt
 
 from scipy.signal import butter, filtfilt
 
-app = Flask(__name__)
+app = Flask(__name__,static_folder="../frontend/build",static_url_path="/")
 CORS(app)
 
-# Configure a debug directory
+@app.route("/")
+def home():
+    return send_from_directory(app.static_folder,"index.html")
+
 DEBUG_DIR = './debug_output'
 os.makedirs(DEBUG_DIR, exist_ok=True)
 
-# Load the trained ResNet model
 MODEL_PATH = './bp_resnet_model'
 model = tf.keras.models.load_model(MODEL_PATH)
 
@@ -55,21 +58,17 @@ def extract_ppg_from_video(video_path, session_id=None):
     if not cap.isOpened():
         raise ValueError("Could not open video file")
     
-    # Get video properties
     fps = cap.get(cv2.CAP_PROP_FPS)
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
-    # Use standard Haar cascade for face detection
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     
-    # Store signals from multiple ROIs
     ppg_signals = {
         'forehead': [],
         'left_cheek': [],
         'right_cheek': []
     }
-    
-    # Debugging: Store sample frames
+
     debug_frames = []
     roi_frames = {roi: [] for roi in ppg_signals.keys()}
     face_detected_count = 0
@@ -82,28 +81,22 @@ def extract_ppg_from_video(video_path, session_id=None):
             
         frame_count_read += 1
         
-        # Convert to grayscale for face detection
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # Detect faces with adjusted parameters
         faces = face_cascade.detectMultiScale(gray, 1.1, 5, minSize=(100, 100))
-        
-        # Create debug visualization frame
+
         debug_frame = frame.copy()
         
         if len(faces) > 0:
             face_detected_count += 1
             x, y, w, h = faces[0]
-            
-            # Draw rectangle around the face
+
             cv2.rectangle(debug_frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
             
-            # Define multiple ROIs
             forehead_roi = frame[y:y+int(h*0.25), x+int(w*0.3):x+int(w*0.7)]
             left_cheek_roi = frame[y+int(h*0.4):y+int(h*0.7), x+int(w*0.1):x+int(w*0.3)]
             right_cheek_roi = frame[y+int(h*0.4):y+int(h*0.7), x+int(w*0.7):x+int(w*0.9)]
             
-            # Draw ROI rectangles on debug frame
             fh_y, fh_h = y, int(h*0.25)
             fh_x, fh_w = x+int(w*0.3), int(w*0.4)
             cv2.rectangle(debug_frame, (fh_x, fh_y), (fh_x+fh_w, fh_y+fh_h), (0, 255, 0), 2)
@@ -116,12 +109,10 @@ def extract_ppg_from_video(video_path, session_id=None):
             rc_x, rc_w = x+int(w*0.7), int(w*0.2)
             cv2.rectangle(debug_frame, (rc_x, rc_y), (rc_x+rc_w, rc_y+rc_h), (0, 255, 0), 2)
             
-            # Add text labels
             cv2.putText(debug_frame, "Forehead", (fh_x, fh_y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
             cv2.putText(debug_frame, "L Cheek", (lc_x, lc_y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
             cv2.putText(debug_frame, "R Cheek", (rc_x, rc_y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-            
-            # Extract average color values (focusing on green channel)
+
             if forehead_roi.size > 0:
                 ppg_signals['forehead'].append(np.mean(forehead_roi[:, :, 1]))
                 roi_frames['forehead'].append(forehead_roi)
@@ -136,22 +127,18 @@ def extract_ppg_from_video(video_path, session_id=None):
         else:
             cv2.putText(debug_frame, "No Face Detected", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         
-        # Store debug frame
-        if frame_count_read % 5 == 0:  # Store every 5th frame to avoid too many images
+        if frame_count_read % 5 == 0:  
             debug_frames.append(debug_frame)
     
     cap.release()
     
-    # Save debug information
     if session_id:
         debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
         os.makedirs(debug_path, exist_ok=True)
         
-        # Save debug frames
         for i, frame in enumerate(debug_frames):
             cv2.imwrite(os.path.join(debug_path, f"frame_{i:03d}.jpg"), frame)
         
-        # Save sample ROIs
         for roi_name, frames in roi_frames.items():
             if frames:
                 roi_dir = os.path.join(debug_path, f"roi_{roi_name}")
@@ -159,12 +146,11 @@ def extract_ppg_from_video(video_path, session_id=None):
                 for i, frame in enumerate(frames[:10]):  # Save first 10 frames
                     cv2.imwrite(os.path.join(roi_dir, f"roi_{i:03d}.jpg"), frame)
     
-    # Check if we have enough signal data
     valid_signals = {}
     signal_stats = {}
     
     for roi, signal in ppg_signals.items():
-        if len(signal) > 20:  # Minimum threshold of frames
+        if len(signal) > 20: 
             signal_array = np.array(signal)
             valid_signals[roi] = signal_array
             signal_stats[roi] = {
@@ -178,38 +164,28 @@ def extract_ppg_from_video(video_path, session_id=None):
     if not valid_signals:
         raise ValueError(f"No valid PPG signals could be extracted. Face detected in {face_detected_count} of {frame_count_read} frames.")
     
-    # Select the best signal based on variance (higher variance = stronger pulse signal)
     signal_variances = {roi: np.var(signal) for roi, signal in valid_signals.items()}
     best_roi = max(signal_variances, key=signal_variances.get)
     
-    # Estimate fps if not available or unrealistic
     estimated_fps = fps if 10 <= fps <= 60 else 30
     
-    # Get raw signal before filtering
     raw_signal = valid_signals[best_roi]
     
-    # Apply bandpass filter (0.7-4Hz corresponds to 42-240 BPM)
     filtered_signal = bandpass_filter(raw_signal, 0.7, 4.0, estimated_fps)
     
-    # Detrend (remove slow drifts)
     detrended_signal = filtered_signal - np.polyval(np.polyfit(np.arange(len(filtered_signal)), filtered_signal, 3), np.arange(len(filtered_signal)))
     
-    # Resample to exactly 875 points
     ppg_resampled = np.interp(
         np.linspace(0, len(detrended_signal) - 1, 875),
         np.arange(len(detrended_signal)),
         detrended_signal
     )
     
-    # Normalize
     ppg_normalized = (ppg_resampled - np.min(ppg_resampled)) / (np.max(ppg_resampled) - np.min(ppg_resampled))
     
-    # Create diagnostic plots if session_id provided
     if session_id:
-        # Create signal plots
         plt.figure(figsize=(15, 10))
         
-        # Plot raw signals from all ROIs
         plt.subplot(3, 1, 1)
         for roi, signal in valid_signals.items():
             plt.plot(signal, label=f"{roi} (var: {signal_variances[roi]:.5f})")
@@ -217,7 +193,6 @@ def extract_ppg_from_video(video_path, session_id=None):
         plt.legend()
         plt.grid(True)
         
-        # Plot processing stages for best ROI
         plt.subplot(3, 1, 2)
         plt.plot(raw_signal, label="Raw")
         plt.plot(filtered_signal, label="Bandpass Filtered")
@@ -226,7 +201,6 @@ def extract_ppg_from_video(video_path, session_id=None):
         plt.legend()
         plt.grid(True)
         
-        # Plot final normalized signal
         plt.subplot(3, 1, 3)
         plt.plot(ppg_normalized)
         plt.title("Final Normalized PPG Signal (Model Input)")
@@ -238,11 +212,9 @@ def extract_ppg_from_video(video_path, session_id=None):
         plt.savefig(os.path.join(debug_path, "ppg_signals.png"))
         plt.close()
         
-        # Save signal data for further analysis
         np.save(os.path.join(debug_path, "raw_signals.npy"), {roi: signal for roi, signal in valid_signals.items()})
         np.save(os.path.join(debug_path, "processed_signal.npy"), ppg_normalized)
         
-        # Save signal stats as text
         with open(os.path.join(debug_path, "signal_stats.txt"), 'w') as f:
             f.write(f"Face detection rate: {face_detected_count}/{frame_count_read} frames\n")
             f.write(f"Video FPS: {fps}, Estimated FPS: {estimated_fps}\n\n")
@@ -261,7 +233,6 @@ def preprocess_ppg(ppg_signal):
     """
     Preprocess PPG signal to match the expected input format of the model.
     """
-    # Reshape for model input (add batch and channel dimensions)
     ppg_processed = ppg_signal.reshape(1, 875, 1)
     return ppg_processed
 
@@ -283,29 +254,22 @@ def predict_bp():
     
     video_file = request.files['video']
     
-    # Generate a session ID for debugging
     session_id = f"{np.random.randint(10000, 99999)}"
     
-    # Save the uploaded video to a temporary file
     with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_video:
         video_path = temp_video.name
         video_file.save(video_path)
     
     try:
-        # Extract PPG signal from the video
         ppg_signal, best_roi, signal_variance = extract_ppg_from_video(video_path, session_id)
-        
-        # Preprocess PPG signal for model input
+
         ppg_processed = preprocess_ppg(ppg_signal)
         
-        # Make prediction
         prediction = model.predict(ppg_processed)
         
-        # Extract SBP and DBP values
         sbp = float(prediction[0][0][0])
         dbp = float(prediction[1][0][0])
         
-        # Debug: Record raw predictions
         debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
         with open(os.path.join(debug_path, "prediction_results.txt"), 'w') as f:
             f.write(f"Raw predictions:\n")
@@ -316,13 +280,10 @@ def predict_bp():
             f.write(f"  Signal variance: {signal_variance}\n")
             f.write(f"  Signal quality: {assess_signal_quality(signal_variance)}\n")
         
-        # Adjust predictions if they are too similar
-        # This is a temporary fix to avoid identical values
         if abs(sbp - dbp) < 5:
-            # A typical SBP to DBP ratio is around 3:2
             mean_bp = (sbp + dbp) / 2
-            sbp = mean_bp * 1.2  # Increase systolic by 20%
-            dbp = mean_bp * 0.8  # Decrease diastolic by 20%
+            sbp = mean_bp * 1.2  
+            dbp = mean_bp * 0.8 
             
             with open(os.path.join(debug_path, "prediction_results.txt"), 'a') as f:
                 f.write("\nAdjusted predictions (values were too similar):\n")
@@ -330,10 +291,8 @@ def predict_bp():
                 f.write(f"  DBP: {dbp}\n")
                 f.write(f"  Difference: {sbp - dbp}\n")
         
-        # Apply some basic physiological constraints
         if sbp <= dbp:
-            # Ensure systolic is higher than diastolic
-            dbp = min(dbp, 0.9 * sbp)  # Make diastolic at most 90% of systolic
+            dbp = min(dbp, 0.9 * sbp)  
             
             with open(os.path.join(debug_path, "prediction_results.txt"), 'a') as f:
                 f.write("\nCorrected predictions (systolic <= diastolic):\n")
@@ -341,11 +300,10 @@ def predict_bp():
                 f.write(f"  DBP: {dbp}\n")
                 f.write(f"  Difference: {sbp - dbp}\n")
             
-        # Clean up temporary file
         os.unlink(video_path)
         
         signal_quality = assess_signal_quality(signal_variance)
-        
+
         return jsonify({
             'systolic': round(sbp, 1),
             'diastolic': round(dbp, 1),
@@ -354,11 +312,9 @@ def predict_bp():
         })
     
     except Exception as e:
-        # Clean up temporary file
         if os.path.exists(video_path):
             os.unlink(video_path)
-        
-        # Log the error
+
         debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
         os.makedirs(debug_path, exist_ok=True)
         with open(os.path.join(debug_path, "error.txt"), 'w') as f:
@@ -381,7 +337,6 @@ def get_debug_info(session_id):
     if not os.path.exists(debug_path):
         return jsonify({'error': 'Debug information not found for this session'}), 404
     
-    # List all files in the debug directory
     debug_files = os.listdir(debug_path)
     
     return jsonify({
