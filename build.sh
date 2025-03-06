@@ -5,7 +5,7 @@ set -o errexit
 # Build React frontend
 cd frontend  # Navigate to your React app directory
 npm install
-npm run build
+CI=false npm run build
 cd ..
 
 # Install Python dependencies
