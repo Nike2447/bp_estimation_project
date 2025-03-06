@@ -6,12 +6,9 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import tempfile
 import random
-
-
-import matplotlib
-matplotlib.use('Agg') 
-import matplotlib.pyplot as plt
-
+#import matplotlib
+#matplotlib.use('Agg') 
+#import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt
 
 app = Flask(__name__,static_folder="../frontend/build",static_url_path="/")
@@ -21,8 +18,8 @@ CORS(app)
 def home():
     return send_from_directory(app.static_folder,"index.html")
 
-DEBUG_DIR = './debug_output'
-os.makedirs(DEBUG_DIR, exist_ok=True)
+# DEBUG_DIR = './debug_output'
+# os.makedirs(DEBUG_DIR, exist_ok=True)
 
 MODEL_PATH = './bp_resnet_model'
 model = tf.keras.models.load_model(MODEL_PATH)
@@ -132,19 +129,19 @@ def extract_ppg_from_video(video_path, session_id=None):
     
     cap.release()
     
-    if session_id:
-        debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
-        os.makedirs(debug_path, exist_ok=True)
+    # if session_id:
+    #     debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
+    #     os.makedirs(debug_path, exist_ok=True)
         
-        for i, frame in enumerate(debug_frames):
-            cv2.imwrite(os.path.join(debug_path, f"frame_{i:03d}.jpg"), frame)
+    #     for i, frame in enumerate(debug_frames):
+    #         cv2.imwrite(os.path.join(debug_path, f"frame_{i:03d}.jpg"), frame)
         
-        for roi_name, frames in roi_frames.items():
-            if frames:
-                roi_dir = os.path.join(debug_path, f"roi_{roi_name}")
-                os.makedirs(roi_dir, exist_ok=True)
-                for i, frame in enumerate(frames[:10]):  # Save first 10 frames
-                    cv2.imwrite(os.path.join(roi_dir, f"roi_{i:03d}.jpg"), frame)
+    #     for roi_name, frames in roi_frames.items():
+    #         if frames:
+    #             roi_dir = os.path.join(debug_path, f"roi_{roi_name}")
+    #             os.makedirs(roi_dir, exist_ok=True)
+    #             for i, frame in enumerate(frames[:10]):  # Save first 10 frames
+    #                 cv2.imwrite(os.path.join(roi_dir, f"roi_{i:03d}.jpg"), frame)
     
     valid_signals = {}
     signal_stats = {}
@@ -183,49 +180,49 @@ def extract_ppg_from_video(video_path, session_id=None):
     
     ppg_normalized = (ppg_resampled - np.min(ppg_resampled)) / (np.max(ppg_resampled) - np.min(ppg_resampled))
     
-    if session_id:
-        plt.figure(figsize=(15, 10))
+    # if session_id:
+    #     plt.figure(figsize=(15, 10))
         
-        plt.subplot(3, 1, 1)
-        for roi, signal in valid_signals.items():
-            plt.plot(signal, label=f"{roi} (var: {signal_variances[roi]:.5f})")
-        plt.title("Raw PPG Signals from Different ROIs")
-        plt.legend()
-        plt.grid(True)
+    #     plt.subplot(3, 1, 1)
+    #     for roi, signal in valid_signals.items():
+    #         plt.plot(signal, label=f"{roi} (var: {signal_variances[roi]:.5f})")
+    #     plt.title("Raw PPG Signals from Different ROIs")
+    #     plt.legend()
+    #     plt.grid(True)
         
-        plt.subplot(3, 1, 2)
-        plt.plot(raw_signal, label="Raw")
-        plt.plot(filtered_signal, label="Bandpass Filtered")
-        plt.plot(detrended_signal, label="Detrended")
-        plt.title(f"Signal Processing Stages (Best ROI: {best_roi})")
-        plt.legend()
-        plt.grid(True)
+    #     plt.subplot(3, 1, 2)
+    #     plt.plot(raw_signal, label="Raw")
+    #     plt.plot(filtered_signal, label="Bandpass Filtered")
+    #     plt.plot(detrended_signal, label="Detrended")
+    #     plt.title(f"Signal Processing Stages (Best ROI: {best_roi})")
+    #     plt.legend()
+    #     plt.grid(True)
         
-        plt.subplot(3, 1, 3)
-        plt.plot(ppg_normalized)
-        plt.title("Final Normalized PPG Signal (Model Input)")
-        plt.xlabel("Sample")
-        plt.ylabel("Normalized Amplitude")
-        plt.grid(True)
+    #     plt.subplot(3, 1, 3)
+    #     plt.plot(ppg_normalized)
+    #     plt.title("Final Normalized PPG Signal (Model Input)")
+    #     plt.xlabel("Sample")
+    #     plt.ylabel("Normalized Amplitude")
+    #     plt.grid(True)
         
-        plt.tight_layout()
-        plt.savefig(os.path.join(debug_path, "ppg_signals.png"))
-        plt.close()
+    #     plt.tight_layout()
+    #     plt.savefig(os.path.join(debug_path, "ppg_signals.png"))
+    #     plt.close()
         
-        np.save(os.path.join(debug_path, "raw_signals.npy"), {roi: signal for roi, signal in valid_signals.items()})
-        np.save(os.path.join(debug_path, "processed_signal.npy"), ppg_normalized)
+    #     np.save(os.path.join(debug_path, "raw_signals.npy"), {roi: signal for roi, signal in valid_signals.items()})
+    #     np.save(os.path.join(debug_path, "processed_signal.npy"), ppg_normalized)
         
-        with open(os.path.join(debug_path, "signal_stats.txt"), 'w') as f:
-            f.write(f"Face detection rate: {face_detected_count}/{frame_count_read} frames\n")
-            f.write(f"Video FPS: {fps}, Estimated FPS: {estimated_fps}\n\n")
-            f.write(f"Best ROI: {best_roi} (variance: {signal_variances[best_roi]:.5f})\n\n")
+    #     with open(os.path.join(debug_path, "signal_stats.txt"), 'w') as f:
+    #         f.write(f"Face detection rate: {face_detected_count}/{frame_count_read} frames\n")
+    #         f.write(f"Video FPS: {fps}, Estimated FPS: {estimated_fps}\n\n")
+    #         f.write(f"Best ROI: {best_roi} (variance: {signal_variances[best_roi]:.5f})\n\n")
             
-            f.write("Signal Statistics:\n")
-            for roi, stats in signal_stats.items():
-                f.write(f"  {roi}:\n")
-                for stat, value in stats.items():
-                    f.write(f"    {stat}: {value}\n")
-                f.write(f"    variance: {signal_variances[roi]:.5f}\n\n")
+    #         f.write("Signal Statistics:\n")
+    #         for roi, stats in signal_stats.items():
+    #             f.write(f"  {roi}:\n")
+    #             for stat, value in stats.items():
+    #                 f.write(f"    {stat}: {value}\n")
+    #             f.write(f"    variance: {signal_variances[roi]:.5f}\n\n")
     
     return ppg_normalized, best_roi, signal_variances[best_roi]
 
@@ -270,35 +267,35 @@ def predict_bp():
         sbp = float(prediction[0][0][0])
         dbp = float(prediction[1][0][0])
         
-        debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
-        with open(os.path.join(debug_path, "prediction_results.txt"), 'w') as f:
-            f.write(f"Raw predictions:\n")
-            f.write(f"  SBP: {sbp}\n")
-            f.write(f"  DBP: {dbp}\n")
-            f.write(f"  Difference: {sbp - dbp}\n")
-            f.write(f"  ROI: {best_roi}\n")
-            f.write(f"  Signal variance: {signal_variance}\n")
-            f.write(f"  Signal quality: {assess_signal_quality(signal_variance)}\n")
+        #debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
+        # with open(os.path.join(debug_path, "prediction_results.txt"), 'w') as f:
+        #     f.write(f"Raw predictions:\n")
+        #     f.write(f"  SBP: {sbp}\n")
+        #     f.write(f"  DBP: {dbp}\n")
+        #     f.write(f"  Difference: {sbp - dbp}\n")
+        #     f.write(f"  ROI: {best_roi}\n")
+        #     f.write(f"  Signal variance: {signal_variance}\n")
+        #     f.write(f"  Signal quality: {assess_signal_quality(signal_variance)}\n")
         
         if abs(sbp - dbp) < 5:
             mean_bp = (sbp + dbp) / 2
             sbp = mean_bp * 1.2  
             dbp = mean_bp * 0.8 
             
-            with open(os.path.join(debug_path, "prediction_results.txt"), 'a') as f:
-                f.write("\nAdjusted predictions (values were too similar):\n")
-                f.write(f"  SBP: {sbp}\n")
-                f.write(f"  DBP: {dbp}\n")
-                f.write(f"  Difference: {sbp - dbp}\n")
+            # with open(os.path.join(debug_path, "prediction_results.txt"), 'a') as f:
+            #     f.write("\nAdjusted predictions (values were too similar):\n")
+            #     f.write(f"  SBP: {sbp}\n")
+            #     f.write(f"  DBP: {dbp}\n")
+            #     f.write(f"  Difference: {sbp - dbp}\n")
         
         if sbp <= dbp:
             dbp = min(dbp, 0.9 * sbp)  
             
-            with open(os.path.join(debug_path, "prediction_results.txt"), 'a') as f:
-                f.write("\nCorrected predictions (systolic <= diastolic):\n")
-                f.write(f"  SBP: {sbp}\n")
-                f.write(f"  DBP: {dbp}\n")
-                f.write(f"  Difference: {sbp - dbp}\n")
+            # with open(os.path.join(debug_path, "prediction_results.txt"), 'a') as f:
+            #     f.write("\nCorrected predictions (systolic <= diastolic):\n")
+            #     f.write(f"  SBP: {sbp}\n")
+            #     f.write(f"  DBP: {dbp}\n")
+            #     f.write(f"  Difference: {sbp - dbp}\n")
             
         os.unlink(video_path)
         
@@ -315,10 +312,10 @@ def predict_bp():
         if os.path.exists(video_path):
             os.unlink(video_path)
 
-        debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
-        os.makedirs(debug_path, exist_ok=True)
-        with open(os.path.join(debug_path, "error.txt"), 'w') as f:
-            f.write(str(e))
+        # debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
+        # os.makedirs(debug_path, exist_ok=True)
+        # with open(os.path.join(debug_path, "error.txt"), 'w') as f:
+        #     f.write(str(e))
         
         return jsonify({
             'error': str(e),
@@ -329,21 +326,21 @@ def predict_bp():
 def health_check():
     return jsonify({'status': 'healthy'})
 
-@app.route('/debug/<session_id>', methods=['GET'])
-def get_debug_info(session_id):
-    """Endpoint to retrieve debug information for a session"""
-    debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
+# @app.route('/debug/<session_id>', methods=['GET'])
+# def get_debug_info(session_id):
+#     """Endpoint to retrieve debug information for a session"""
+#     debug_path = os.path.join(DEBUG_DIR, f"session_{session_id}")
     
-    if not os.path.exists(debug_path):
-        return jsonify({'error': 'Debug information not found for this session'}), 404
+#     if not os.path.exists(debug_path):
+#         return jsonify({'error': 'Debug information not found for this session'}), 404
     
-    debug_files = os.listdir(debug_path)
+#     debug_files = os.listdir(debug_path)
     
-    return jsonify({
-        'session_id': session_id,
-        'files': debug_files,
-        'path': debug_path
-    })
+#     return jsonify({
+#         'session_id': session_id,
+#         'files': debug_files,
+#         'path': debug_path
+#     })
 
 if __name__ == '__main__':
     app.run()

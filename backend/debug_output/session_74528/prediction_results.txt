@@ -1,7 +1,0 @@
-Raw predictions:
-  SBP: 131.96327209472656
-  DBP: 75.64142608642578
-  Difference: 56.32184600830078
-  ROI: forehead
-  Signal variance: 7.697240666564415
-  Signal quality: good
