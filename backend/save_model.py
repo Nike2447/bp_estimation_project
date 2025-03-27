@@ -1,18 +1,11 @@
-# save_model.py
 import tensorflow as tf
 import os
 
-# Path where you want to save the model
 MODEL_PATH = './bp_resnet_model'
 
-# This assumes 'model' is your trained model from the provided code
-# If the model variable is still in memory, you can directly use:
-# model.save(MODEL_PATH)
 
-# If you need to re-run your training code:
 def save_trained_model():
-    # Import your training code
-    # This is a simplified version, you should modify to match your actual implementation
+
     import numpy as np
     import h5py
     from tensorflow.keras.layers import Input, Conv1D, BatchNormalization, Activation, Add, GlobalAveragePooling1D, Dense
@@ -65,17 +58,14 @@ def save_trained_model():
         model = Model(inputs=X_input, outputs=[SBP, DBP], name="ResNet1D")
         return model
     
-    # Load and preprocess the data
     filename = "./Mimic.h5" 
     ppg, labels, subject_idx = load_dataset(filename, num_samples=10000)  
     ppg, sbp, dbp = preprocess_data(ppg, labels)
     
-    # Split the data
     ppg_train, ppg_val, sbp_train, sbp_val, dbp_train, dbp_val = train_test_split(
         ppg, sbp, dbp, test_size=0.2, random_state=42
     )
-    
-    # Define and compile the model
+
     input_shape = (875, 1)  
     num_blocks = [2, 2, 2]  
     filters = [64, 128, 256] 
@@ -86,7 +76,6 @@ def save_trained_model():
         metrics={"SBP": "mae", "DBP": "mae"}
     )
     
-    # Train the model
     history = model.fit(
         ppg_train,
         {"SBP": sbp_train, "DBP": dbp_train},
@@ -95,7 +84,6 @@ def save_trained_model():
         batch_size=32
     )
     
-    # Save the model
     model.save(MODEL_PATH)
     print(f"Model saved to {MODEL_PATH}")
 
