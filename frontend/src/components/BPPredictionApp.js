@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, CircleOff, Activity, Loader, Heart, ArrowLeft, AlertCircle, UserCheck, SignalHigh} from 'lucide-react';
+import Graph from './graph';
 
 const BPPredictionApp = ({ onBack, onSaveReading  }) => {
   const [recording, setRecording] = useState(false);
@@ -10,6 +11,8 @@ const BPPredictionApp = ({ onBack, onSaveReading  }) => {
   const [error, setError] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [historicalData, setHistoricalData] = useState([]);
+  const [timeRange, setTimeRange] = useState('7days');
   
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -105,7 +108,7 @@ const BPPredictionApp = ({ onBack, onSaveReading  }) => {
       const formData = new FormData();
       formData.append('video', blob, 'recording.webm');
       
-      const response = await fetch('/predict', {
+      const response = await fetch('http://localhost:5000/predict', {
         method: 'POST',
         body: formData,
       });
@@ -118,6 +121,14 @@ const BPPredictionApp = ({ onBack, onSaveReading  }) => {
       const result = await response.json();
       setPrediction(result);
       setShowResults(true);
+
+      // Save the prediction to the backend database
+      await fetch('http://localhost:5000/save-reading', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      });
+
       onSaveReading(result);
     } catch (err) {
       setError("Error getting prediction: " + err.message);
@@ -167,6 +178,26 @@ const BPPredictionApp = ({ onBack, onSaveReading  }) => {
       bgColor: "bg-red-50", 
       icon: <SignalHigh className="text-red-500" size={18} />
     };
+  };
+
+  const fetchHistoricalData = async (timeRange) => {
+    try {
+      const response = await fetch(`http://localhost:5000/get-readings?range=${timeRange}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch historical data");
+      }
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      console.error("Error fetching historical data:", err);
+      setError("Failed to fetch historical data");
+      return [];
+    }
+  };
+
+  const handleFetchData = async () => {
+    const data = await fetchHistoricalData(timeRange);
+    setHistoricalData(data);
   };
   
   return (
@@ -558,6 +589,26 @@ const BPPredictionApp = ({ onBack, onSaveReading  }) => {
           </ol>
         </div>
       )}
+      
+      <div className="w-full mb-6">
+        <select
+          value={timeRange}
+          onChange={(e) => setTimeRange(e.target.value)}
+          className="mb-4 p-2 border rounded"
+        >
+          <option value="1day">Past Day</option>
+          <option value="7days">Past 7 Days</option>
+          <option value="1month">Past Month</option>
+          <option value="3months">Past 3 Months</option>
+        </select>
+        <button
+          onClick={handleFetchData}
+          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+        >
+          Fetch Data
+        </button>
+        {historicalData.length > 0 && <Graph data={historicalData} />}
+      </div>
       
       {/* Add some styles for animations */}
       <style jsx>{`

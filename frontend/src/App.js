@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import BPPredictionApp from './components/BPPredictionApp';
+import Graph from './components/graph';
 import { Heart, Info, Home, Activity, ArrowRight, Bell, ArrowLeft, FileText, Check, ChevronDown, AlertCircle, User, BarChart2 } from 'lucide-react';
 
 function App() {
@@ -40,6 +41,8 @@ function App() {
         return <AboutUsPage onBack={() => navigateTo('home')} />;
       case 'results':
         return <ResultsHistoryPage onBack={() => navigateTo('home')} lastReading={lastReading} navigateTo={navigateTo} />;
+      case 'graph': // Add case for the Graph page
+        return <Graph onBack={() => navigateTo('home')} />;
       case 'home':
       default:
         return <HomePage onStart={() => navigateTo('prediction')} onAbout={() => navigateTo('about')} onResults={() => navigateTo('results')} />;
@@ -89,6 +92,12 @@ function App() {
               className={`flex items-center text-white px-3 py-1 rounded-md transition-all ${currentPage === 'results' ? 'bg-blue-700' : 'hover:bg-blue-700'}`}
             >
               <FileText size={18} className="mr-1" /> Results
+            </button>
+            <button 
+              onClick={() => navigateTo('graph')} // Add navigation for the Graph page
+              className={`flex items-center text-white px-3 py-1 rounded-md transition-all ${currentPage === 'graph' ? 'bg-blue-700' : 'hover:bg-blue-700'}`}
+            >
+              <BarChart2 size={18} className="mr-1" /> Graph
             </button>
             <button 
               onClick={() => navigateTo('about')} 

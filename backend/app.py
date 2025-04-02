@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import sqlite3
 import tensorflow as tf
 import cv2
 from flask import Flask, request, jsonify, send_from_directory
@@ -8,6 +9,7 @@ import tempfile
 import time
 import csv
 from scipy.signal import butter, filtfilt
+from datetime import datetime, timedelta
 
 app = Flask(__name__, static_folder="../frontend/build", static_url_path="/")
 CORS(app)
@@ -28,6 +30,7 @@ BUFFER_SIZE = 150
 VIDEO_FRAME_RATE = 15
 BPM_CALCULATION_FREQUENCY = 5
 BPM_BUFFER_SIZE = 10
+
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
     nyq = 0.5 * fs
@@ -471,6 +474,103 @@ def predict_vitals():
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy'})
+
+DB_PATH = "vital_signs.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS vital_signs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            session_id TEXT,
+            heart_rate REAL,
+            hr_status TEXT,
+            systolic REAL,
+            diastolic REAL,
+            signal_quality TEXT,
+            age TEXT,
+            gender TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+@app.route("/save-reading", methods=["POST"])
+def save_reading():
+    try:
+        data = request.json
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        session_id = data.get("session_id", "unknown")
+        heart_rate = data.get("heart_rate")
+        hr_status = data.get("hr_status")
+        systolic = data.get("systolic")
+        diastolic = data.get("diastolic")
+        signal_quality = data.get("signal_quality")
+        age = data.get("age", "unknown")
+        gender = data.get("gender", "unknown")
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO vital_signs (timestamp, session_id, heart_rate, hr_status, systolic, diastolic, signal_quality, age, gender)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (timestamp, session_id, heart_rate, hr_status, systolic, diastolic, signal_quality, age, gender))
+        conn.commit()
+        conn.close()
+
+        return jsonify({"message": "Reading saved successfully"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/get-readings", methods=["GET"])
+def get_readings():
+    try:
+        time_range = request.args.get("range", "7days")
+        now = datetime.now()
+
+        if time_range == "1day":
+            start_time = now - timedelta(days=1)
+        elif time_range == "7days":
+            start_time = now - timedelta(days=7)
+        elif time_range == "1month":
+            start_time = now - timedelta(days=30)
+        elif time_range == "3months":
+            start_time = now - timedelta(days=90)
+        else:
+            return jsonify({"error": "Invalid time range"}), 400
+
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT timestamp, heart_rate, hr_status, systolic, diastolic, signal_quality, age, gender
+            FROM vital_signs
+            WHERE timestamp >= ?
+            ORDER BY timestamp ASC
+        ''', (start_time.strftime('%Y-%m-%d %H:%M:%S'),))
+        rows = cursor.fetchall()
+        conn.close()
+
+        data = [
+            {
+                "timestamp": row[0],
+                "heart_rate": row[1],
+                "hr_status": row[2],
+                "systolic": row[3],
+                "diastolic": row[4],
+                "signal_quality": row[5],
+                "age": row[6],
+                "gender": row[7],
+            }
+            for row in rows
+        ]
+
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
